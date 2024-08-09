@@ -1,0 +1,22 @@
+{
+    "python.analysis.autoImportCompletions": true,
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+    },
+    "notebook.formatOnSave.enabled": true,
+    "flake8.args": [
+        "--config=.flake8"
+    ],
+    "black-formatter.args": [
+        "--config",
+        "pyproject.toml"
+    ],
+    "isort.args": [
+        "--settings-file",
+        "pyproject.toml"
+    ],
+}

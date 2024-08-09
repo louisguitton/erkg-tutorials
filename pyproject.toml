@@ -1,0 +1,8 @@
+[tool.black]
+# https://github.com/psf/black#pyprojecttoml
+line-length = 100
+
+
+[tool.isort]
+# https://github.com/timothycrosley/isort#configuring-isort
+profile = "black"
