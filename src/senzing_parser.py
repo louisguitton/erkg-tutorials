@@ -233,6 +233,7 @@ if __name__ == "__main__":
     entities = extract_senzing_results("data/ICIJ-entity-report-2024-06-21_12-04-57-std.json.zip")
 
     load_to_neo4j(gds, entities)
+
     gds.run_cypher(
         """
 MATCH (ent:Entity)
