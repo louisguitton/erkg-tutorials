@@ -204,20 +204,15 @@ def _connect_related_entities(gds: GraphDataScience, entities: dict[int, Entity]
     )
 
     unwind_query: str = """
-    UNWIND $rows AS row
-    CALL {
-    WITH row
-    MATCH
-        (ent:Entity {uid: row.entity_uid}),
-        (rel_ent:Entity {uid: row.rel_ent})
-    MERGE (ent)-[:RELATED {
-        ambiguous: row.ambiguous,
-        disclosed: row.disclosed,
-        match_level: row.match_level,
-        match_level_code: row.match_level_code
-    }]->(rel_ent)
-    } IN TRANSACTIONS OF 10000 ROWS
-        """
+UNWIND $rows AS row
+CALL {
+  WITH row
+  MATCH
+    (ent:Entity {uid: row.entity_uid}),
+    (rel_ent:Entity {uid: row.rel_ent})
+  MERGE (ent)-[:RELATED {ambiguous: row.ambiguous, disclosed: row.disclosed, match_level: row.match_level, match_level_code: row.match_level_code}]->(rel_ent)
+} IN TRANSACTIONS OF 10000 ROWS
+    """
 
     gds.run_cypher(
         unwind_query,
