@@ -228,6 +228,7 @@ if __name__ == "__main__":
     entities = extract_senzing_results("data/ICIJ-entity-report-2024-06-21_12-04-57-std.json.zip")
 
     load_to_neo4j(gds, entities)
+    # currently fails with ServiceUnavailable: Failed to read from defunct connection IPv4Address(('localhost', 7687)) (ResolvedIPv4Address(('127.0.0.1', 7687)))
 
     gds.run_cypher(
         """
