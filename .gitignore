@@ -2,6 +2,7 @@ data/
 senzing_article/
 requirements-old.txt
 .github/msg.txt
+notebooks/
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,venv,jupyternotebooks
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,venv,jupyternotebooks

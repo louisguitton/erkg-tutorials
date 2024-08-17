@@ -19,4 +19,6 @@
         "--settings-file",
         "pyproject.toml"
     ],
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "notebook.defaultFormatter": "ms-python.black-formatter",
 }
