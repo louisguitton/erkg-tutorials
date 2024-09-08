@@ -26,18 +26,7 @@ def kb(entities: list[Entity], aliases: list[Alias]) -> AnnKnowledgeBase:
     return ann_kb
 
 
-def ann_linker(nlp, kb, cg):
-    """Adapted from https://github.com/microsoft/spacy-ann-linker/blob/master/spacy_ann/cli/create_index.py"""
-    ann_linker = nlp.create_pipe("ann_linker")
+def nlp_with_linker(nlp: Language, kb: AnnKnowledgeBase) -> Language:
+    ann_linker = nlp.add_pipe("ann_linker", last=True)
     ann_linker.set_kb(kb)
-    ann_linker.set_cg(get_candidates)  # get_candidates_batch
-    return ann_linker
-
-
-def nlp_with_linker(nlp, ann_linker):
-    """Adapted from https://github.com/microsoft/spacy-ann-linker/blob/master/spacy_ann/cli/create_index.py"""
-    nlp.add_pipe(ann_linker, last=True)
-
-    nlp.meta["name"] = new_model_name
-    nlp.to_disk(output_dir)
-    nlp.from_disk(output_dir)
+    return nlp

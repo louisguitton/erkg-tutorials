@@ -4,7 +4,7 @@ Adapted from:
 - https://github.com/explosion/spaCy/blob/master/spacy/kb/kb_in_memory.pyx
 """
 
-from typing import TypedDict
+from typing import Iterable, TypedDict
 
 import lancedb
 from lancedb.embeddings import get_registry
@@ -75,6 +75,9 @@ class AnnKnowledgeBase:
             [self.LanceAlias(alias=alias, vector=self._embed(alias.alias)) for alias in aliases]
         )
 
+    def get_candidates_batch(self, mentions: Iterable[Span]) -> Iterable[Iterable[Alias]]:
+        return [self.get_candidates(span) for span in mentions]
+
     def get_candidates(self, mention: Span) -> list[Alias]:
         return self.get_alias_candidates(mention.text)
 
@@ -91,15 +94,12 @@ class AnnKnowledgeBase:
         filtered_results = [r for r in results if r["_distance"] < self.max_distance]
         return [Alias(**result["alias"]) for result in filtered_results]
 
+    def _aliases_to_entities(self, aliases: list[Alias]) -> list[str]:
+        return list(set(entity_id for alias in aliases for entity_id in alias.entities))
+
     def get_entity_candidates(self, query: str) -> list[str]:
         """Get the entity IDs corresponding to a mention."""
-        return list(
-            set(
-                entity_id
-                for alias in self.get_alias_candidates(query)
-                for entity_id in alias.entities
-            )
-        )
+        return self._aliases_to_entities(aliases=self.get_alias_candidates(query))
 
     def add_entities(self, entities: list[Entity]):
         """Build the ANN index of entities in LanceDB."""
@@ -113,7 +113,7 @@ class AnnKnowledgeBase:
 
     def disambiguate(
         self, candidate_entities: list[str], doc_embedding: list[int]
-    ) -> tuple[Entity | None, float]:
+    ) -> list[tuple[Entity, float]]:
         """Disambiguate candidate entities by getting the most similar to the context in the doc."""
         table = self.db.open_table("entities")
         entities_results = (
@@ -122,17 +122,13 @@ class AnnKnowledgeBase:
             .metric("cosine")
             # prefilter for only the candidate entities
             .where(f"list_has({candidate_entities}, entity.entity_id)", prefilter=True)
-            # get the argmax
-            .limit(1)
+            # get the top_k
+            .limit(self.top_k)
             # serialize
             .select(["entity"])
             .to_list()
         )
-        if not len(entities_results):
-            return None, 1
-        entity = entities_results[0]["entity"]
-        cosine_score = entities_results[0]["_distance"]
-        return Entity(**entity), cosine_score
+        return [(Entity(**result["entity"]), result["_distance"]) for result in entities_results]
 
     """
     We looked at the spacy abstractions closely:
