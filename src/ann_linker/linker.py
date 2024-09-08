@@ -21,6 +21,7 @@ class AnnLinker:
         Span.set_extension("kb_candidates", default=[], force=True)
 
         self.kb = None
+        self.use_disambiguation_threshold = False
 
     def __call__(self, doc: Doc) -> Doc:
         """Annotate spaCy doc.ents with candidate info.
@@ -36,8 +37,6 @@ class AnnLinker:
         mentions = doc.ents
         batch_candidates = self.kb.get_candidates_batch(mentions)
 
-        doc_embedding = self.kb._embed(doc.text)
-
         for ent, alias_candidates in zip(doc.ents, batch_candidates):
             ent._.alias_candidates = alias_candidates
 
@@ -45,18 +44,25 @@ class AnnLinker:
                 continue
             else:
                 candidate_entities = self.kb._aliases_to_entities(alias_candidates)
-                kb_candidates = self.kb.disambiguate(candidate_entities, doc_embedding)
+
+                # TODO: have a configurable context (e.g. -1/+1 sentence)
+                context_embedding = self.kb._embed(ent.sent)
+
+                kb_candidates = self.kb.disambiguate(candidate_entities, context_embedding)
 
                 ent._.kb_candidates = kb_candidates
 
-                filtered_results = [
-                    entity
-                    for entity, cosine_score in kb_candidates
-                    if cosine_score < self.kb.max_distance
-                ]
+                if self.use_disambiguation_threshold:
+                    filtered_results = [
+                        (entity, cosine_score)
+                        for entity, cosine_score in kb_candidates
+                        if cosine_score < self.kb.max_distance
+                    ]
+                else:
+                    filtered_results = kb_candidates
 
                 if len(filtered_results):
-                    best_candidate = filtered_results[0]
+                    best_candidate = filtered_results[0][0]
                     for token in ent:
                         token.ent_kb_id_ = best_candidate.entity_id
         return doc

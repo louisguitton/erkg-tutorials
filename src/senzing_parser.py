@@ -29,7 +29,6 @@ class Entity:
     records: typing.Dict[str, str] = field(default_factory=lambda: {})
     related: typing.Dict[int, dict] = field(default_factory=lambda: {})
     has_ref: bool = False
-    has_ref: bool = False
 
 
 def extract_senzing_results(export_path: pathlib.Path) -> dict[int, Entity]:

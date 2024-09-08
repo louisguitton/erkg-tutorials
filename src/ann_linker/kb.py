@@ -75,13 +75,13 @@ class AnnKnowledgeBase:
             [self.LanceAlias(alias=alias, vector=self._embed(alias.alias)) for alias in aliases]
         )
 
-    def get_candidates_batch(self, mentions: Iterable[Span]) -> Iterable[Iterable[Alias]]:
+    def get_candidates_batch(self, mentions: Iterable[Span]) -> Iterable[list[tuple[Alias, float]]]:
         return [self.get_candidates(span) for span in mentions]
 
-    def get_candidates(self, mention: Span) -> list[Alias]:
+    def get_candidates(self, mention: Span) -> list[tuple[Alias, float]]:
         return self.get_alias_candidates(mention.text)
 
-    def get_alias_candidates(self, query: str) -> list[Alias]:
+    def get_alias_candidates(self, query: str) -> list[tuple[Alias, float]]:
         """Embed a mention query, search ANN neighbours against the aliases index."""
         table = self.db.open_table("aliases")
         results = (
@@ -92,10 +92,10 @@ class AnnKnowledgeBase:
             .to_list()
         )
         filtered_results = [r for r in results if r["_distance"] < self.max_distance]
-        return [Alias(**result["alias"]) for result in filtered_results]
+        return [(Alias(**result["alias"]), result["_distance"]) for result in filtered_results]
 
-    def _aliases_to_entities(self, aliases: list[Alias]) -> list[str]:
-        return list(set(entity_id for alias in aliases for entity_id in alias.entities))
+    def _aliases_to_entities(self, aliases: list[tuple[Alias, float]]) -> list[str]:
+        return list(set(entity_id for alias, _score in aliases for entity_id in alias.entities))
 
     def get_entity_candidates(self, query: str) -> list[str]:
         """Get the entity IDs corresponding to a mention."""
@@ -106,21 +106,24 @@ class AnnKnowledgeBase:
         table = self.db.open_table("entities")
         table.add(
             [
+                # TODO: add option for when the entity description is not available
                 self.LanceEntity(entity=entity, vector=self._embed(entity.description))
                 for entity in entities
             ]
         )
 
     def disambiguate(
-        self, candidate_entities: list[str], doc_embedding: list[int]
+        self, candidate_entities: list[str], context_embedding: list[int]
     ) -> list[tuple[Entity, float]]:
         """Disambiguate candidate entities by getting the most similar to the context in the doc."""
         table = self.db.open_table("entities")
         entities_results = (
             # search the entity ANN index by the embedding of the context in the doc
-            table.search(doc_embedding)
+            table.search(context_embedding)
             .metric("cosine")
             # prefilter for only the candidate entities
+            # here we use a DataFusion function: https://lancedb.github.io/lancedb/sql/#sql-filters
+            # list_has: https://datafusion.apache.org/user-guide/sql/scalar_functions.html#list-has
             .where(f"list_has({candidate_entities}, entity.entity_id)", prefilter=True)
             # get the top_k
             .limit(self.top_k)

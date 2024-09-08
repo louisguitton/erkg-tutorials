@@ -63,3 +63,6 @@ export OPENBLAS=$(brew --prefix openblas)
 
 export CFLAGS="-falign-functions=8 ${CFLAGS}"
 ```
+
+Download and unzip the Senzing overlay:
+<https://storage.googleapis.com/erkg/icij/ICIJ-entity-report-2024-06-21_12-04-57-std.json.zip>
