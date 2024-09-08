@@ -4,22 +4,18 @@ Adapted from:
 - https://github.com/explosion/spaCy/blob/master/spacy/kb/kb_in_memory.pyx
 """
 
-from typing import Iterable, TypedDict
+from typing import Iterable
 
 import lancedb
 from lancedb.embeddings import get_registry
 from lancedb.pydantic import LanceModel, Vector
+from lancedb.rerankers import CrossEncoderReranker, LinearCombinationReranker
 from pydantic import create_model
 from spacy.tokens import Span
 
 from src.ann_linker.types import Alias, Entity
 
 FAST_AND_SMALL = "sentence-transformers/all-MiniLM-L6-v2"
-
-
-class EntityCandidate(TypedDict):
-    alias: Alias
-    _distance: float
 
 
 class AnnKnowledgeBase:
@@ -111,27 +107,40 @@ class AnnKnowledgeBase:
                 for entity in entities
             ]
         )
+        # Create a full-text-search index, ref: https://lancedb.github.io/lancedb/fts/
+        table.create_fts_index("entity.name", replace=True)
 
     def disambiguate(
-        self, candidate_entities: list[str], context_embedding: list[int]
+        self, candidate_entities: list[str], context_embedding: list[int], text_query: str
     ) -> list[tuple[Entity, float]]:
         """Disambiguate candidate entities by getting the most similar to the context in the doc."""
         table = self.db.open_table("entities")
-        entities_results = (
-            # search the entity ANN index by the embedding of the context in the doc
-            table.search(context_embedding)
-            .metric("cosine")
-            # prefilter for only the candidate entities
-            # here we use a DataFusion function: https://lancedb.github.io/lancedb/sql/#sql-filters
-            # list_has: https://datafusion.apache.org/user-guide/sql/scalar_functions.html#list-has
-            .where(f"list_has({candidate_entities}, entity.entity_id)", prefilter=True)
-            # get the top_k
-            .limit(self.top_k)
-            # serialize
-            .select(["entity"])
-            .to_list()
-        )
-        return [(Entity(**result["entity"]), result["_distance"]) for result in entities_results]
+        # we do a sort of hybrid search between:
+        #   - full-text-search on entity names
+        #   - vector search on the ANN index by the embedding of the context in the doc
+        # ref: https://lancedb.github.io/lancedb/hybrid_search/hybrid_search/
+        # ref: https://lancedb.github.io/lancedb/reranking/
+        entities_results = table.search(text_query, query_type="fts").select(["entity"]).to_list()
+        if len(entities_results):
+            cosine_score = 0
+            return [(Entity(**result["entity"]), cosine_score) for result in entities_results]
+        else:
+            entities_results = (
+                table.search(context_embedding)
+                .metric("cosine")
+                # prefilter for only the candidate entities
+                # here we use a DataFusion function: https://lancedb.github.io/lancedb/sql/#sql-filters
+                # list_has: https://datafusion.apache.org/user-guide/sql/scalar_functions.html#list-has
+                .where(f"list_has({candidate_entities}, entity.entity_id)", prefilter=True)
+                # get the top_k
+                .limit(self.top_k)
+                # serialize
+                .select(["entity"])
+                .to_list()
+            )
+            return [
+                (Entity(**result["entity"]), result["_distance"]) for result in entities_results
+            ]
 
     """
     We looked at the spacy abstractions closely:

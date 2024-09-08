@@ -30,7 +30,10 @@ def kb(entities, aliases):
 
 def test_kb(kb):
     assert kb.get_alias_candidates("ML") == [
-        Alias(alias="ML", entities=["a1", "a2"], probabilities=[0.5, 0.5])
+        (
+            Alias(alias="ML", entities=["a1", "a2"], probabilities=[0.5, 0.5]),
+            -1.1920928955078125e-07,
+        )
     ]
 
     candidate_entities = kb.get_entity_candidates("ML")
@@ -39,11 +42,11 @@ def test_kb(kb):
     doc_embedding = kb._embed(
         "Linear regression is one of the first statistical models used by students of ML"
     )
-    assert kb.disambiguate(candidate_entities, doc_embedding) == [
+    assert kb.disambiguate(candidate_entities, doc_embedding, "ML") == [
         (
             Entity(
                 entity_id="a1",
-                name="Machine learning (ML)",
+                name="Machine learning",
                 description="Machine learning (ML) is the scientific study of algorithms and statistical models...",
                 label=None,
             ),
@@ -52,7 +55,7 @@ def test_kb(kb):
         (
             Entity(
                 entity_id="a2",
-                name='ML ("Meta Language")',
+                name="Meta Language",
                 description='ML ("Meta Language") is a general-purpose functional programming language. It has roots in Lisp, and has been characterized as "Lisp with types".',
                 label=None,
             ),
@@ -61,7 +64,10 @@ def test_kb(kb):
     ]
 
     assert kb.get_alias_candidates("learning") == [
-        Alias(alias="Machine learning", entities=["a1"], probabilities=[1.0])
+        (
+            Alias(alias="Machine learning", entities=["a1"], probabilities=[1.0]),
+            0.3687775135040283,
+        )
     ]
     assert kb.get_alias_candidates("Machine") == []
 
@@ -86,41 +92,44 @@ def test_linker(nlp, kb, aliases):
     # then
     assert ent_nlp.kb_id_ == "a3"
     assert ent_nlp._.alias_candidates == [
-        Alias(alias="NLP", entities=["a3", "a4"], probabilities=[0.5, 0.5]),
-        Alias(alias="Natural language processing", entities=["a3"], probabilities=[1.0]),
+        (Alias(alias="NLP", entities=["a3", "a4"], probabilities=[0.5, 0.5]), 0.0),
+        (
+            Alias(alias="Natural language processing", entities=["a3"], probabilities=[1.0]),
+            0.39776819944381714,
+        ),
     ]
     assert ent_nlp._.kb_candidates == [
         (
             Entity(
                 entity_id="a3",
-                name="Natural language processing (NLP)",
+                name="Natural language processing",
                 description="Natural language processing (NLP) is a subfield of linguistics, computer science, information engineering, and artificial intelligence concerned with the interactions between computers and human (natural) languages, in particular how to program computers to process and analyze large amounts of natural language data.",
                 label=None,
             ),
-            0.2833211421966553,
+            0.3475921154022217,
         ),
         (
             Entity(
                 entity_id="a4",
-                name="Neuro-linguistic programming (NLP)",
+                name="Neuro-linguistic programming",
                 description="Neuro-linguistic programming (NLP) is a pseudoscientific approach to communication, personal development, and psychotherapy created by Richard Bandler and John Grinder in California, United States in the 1970s.",
                 label=None,
             ),
-            0.3160281181335449,
+            0.3534255027770996,
         ),
     ]
 
     assert ent_ml._.alias_candidates == [
-        Alias(alias="Machine learning", entities=["a1"], probabilities=[1.0])
+        (Alias(alias="Machine learning", entities=["a1"], probabilities=[1.0]), 0.15205204486846924)
     ]
     assert ent_ml._.kb_candidates == [
         (
             Entity(
                 entity_id="a1",
-                name="Machine learning (ML)",
+                name="Machine learning",
                 description="Machine learning (ML) is the scientific study of algorithms and statistical models...",
                 label=None,
             ),
-            0.5660956501960754,
+            0,
         )
     ]

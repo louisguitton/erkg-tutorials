@@ -48,7 +48,9 @@ class AnnLinker:
                 # TODO: have a configurable context (e.g. -1/+1 sentence)
                 context_embedding = self.kb._embed(ent.sent)
 
-                kb_candidates = self.kb.disambiguate(candidate_entities, context_embedding)
+                kb_candidates = self.kb.disambiguate(
+                    candidate_entities, context_embedding, ent.text
+                )
 
                 ent._.kb_candidates = kb_candidates
 
