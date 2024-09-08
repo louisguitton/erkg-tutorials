@@ -1,10 +1,19 @@
-from typing import Optional
+from typing import Iterable, Optional
 
 import spacy
 import srsly
 from pydantic import BaseModel
-from spacy.kb import Candidate, InMemoryLookupKB, KnowledgeBase
+from spacy.kb import (
+    Candidate,
+    InMemoryLookupKB,
+    KnowledgeBase,
+    get_candidates,
+    get_candidates_batch,
+)
 from spacy.language import Language
+from spacy.tokens import Span
+
+from ann_kb import AnnKnowledgeBase
 
 INPUT_DIM = 300  # dimension of pretrained input vectors
 
@@ -37,7 +46,7 @@ def nlp() -> Language:
 def kb(nlp: Language, entities: list[Entity], aliases: list[Alias]) -> KnowledgeBase:
     """Adapted from https://github.com/microsoft/spacy-ann-linker/blob/master/spacy_ann/cli/create_index.py"""
 
-    kb = InMemoryLookupKB(vocab=nlp.vocab, entity_vector_length=INPUT_DIM)
+    kb = AnnKnowledgeBase(vocab=nlp.vocab, entity_vector_length=INPUT_DIM)
 
     # set up the data
     entity_ids = []
@@ -64,20 +73,16 @@ def kb(nlp: Language, entities: list[Entity], aliases: list[Alias]) -> Knowledge
             prior_prob = [1.0 / n_ents] * n_ents
             kb.add_alias(alias=a.alias, entities=ents, probabilities=prior_prob)
 
+    # TODO: fit ANN index
+
     return kb
-
-
-def cg():
-    """Adapted from https://github.com/microsoft/spacy-ann-linker/blob/master/spacy_ann/cli/create_index.py"""
-    cg = CandidateGenerator().fit(kb.get_alias_strings(), verbose=True)
-    return cg
 
 
 def ann_linker(nlp, kb, cg):
     """Adapted from https://github.com/microsoft/spacy-ann-linker/blob/master/spacy_ann/cli/create_index.py"""
     ann_linker = nlp.create_pipe("ann_linker")
     ann_linker.set_kb(kb)
-    ann_linker.set_cg(cg)
+    ann_linker.set_cg(get_candidates)
     return ann_linker
 
 
