@@ -12,7 +12,7 @@ from lancedb.pydantic import LanceModel, Vector
 from pydantic import create_model
 from spacy.tokens import Span
 
-from ann_linker import Alias, Entity
+from src.ann_linker.types import Alias, Entity
 
 FAST_AND_SMALL = "sentence-transformers/all-MiniLM-L6-v2"
 
