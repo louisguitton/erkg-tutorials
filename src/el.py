@@ -39,8 +39,3 @@ doc = nlp_dbpedia(
 )
 displacy.render(doc, style="ent")
 print(list(zip(doc.ents, spans_to_dbpedia(doc._.spans))))
-
-
-# TODO: test Gliner mention extractor, test Gliner linker
-# TODO: test relaation extractor
-# TODO: read source code of zshot.linker.linker_regen.trie.Trie to understand format and if I can build my own
