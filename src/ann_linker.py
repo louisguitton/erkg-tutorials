@@ -82,7 +82,7 @@ def ann_linker(nlp, kb, cg):
     """Adapted from https://github.com/microsoft/spacy-ann-linker/blob/master/spacy_ann/cli/create_index.py"""
     ann_linker = nlp.create_pipe("ann_linker")
     ann_linker.set_kb(kb)
-    ann_linker.set_cg(get_candidates)
+    ann_linker.set_cg(get_candidates)  # get_candidates_batch
     return ann_linker
 
 
