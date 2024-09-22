@@ -1,11 +1,21 @@
 # erkg-tutorials
 
-> Tutorials for Entity Resolved Knowledge Graphs
+> Tutorials for Entity Resolved Knowledge Graphs, doing Entity Linking on ICIJ articles.
 
-## Installation
+## Installation and Usage
 
-- setup python env
-- download Senzing ER results
+```sh
+pyenv local 3.12.5
+poetry install
+poetry shell
+jupyter notebook
+# open tutorial.ipynb
+```
+
+## [Ignore] Old setup notes
+
+- Download and unzip the Senzing overlay:
+  <https://storage.googleapis.com/erkg/icij/ICIJ-entity-report-2024-06-21_12-04-57-std.json.zip>
 - setup local Neo4j with GDS plugin and [Macos setting](https://neo4j.com/docs/graph-data-science/current/installation/#_graph_data_science_on_macos)
 - run src.senzing_parser
 
@@ -31,18 +41,6 @@ GDS plugin 2.6.8
 lsof -i tcp:5000-5005,6000-6005,7000-7005
 ```
 
-## TODO
-
-- [x] read source code of zshot.linker.linker_regen.trie.Trie to understand format and if I can build my own
-- [ ] make microsoft sacy ann linker work on example data
-  - spacy_ann create_index en_core_web_md examples/tutorial/data examples/tutorial/models
-- [ ] create entities.jsonl and aliases.jsonl using dbpedia entities linked from zshot and make microsoft work on custom data
-
-- [ ] test Gliner mention extractor, test Gliner linker
-- [ ] TODO: test relation extractor
-
-## setup notes
-
 ```sh
 pyenv install --list | grep " 3\.[(7)]"
 brew install openssl readline sqlite3 xz zlib
@@ -63,6 +61,3 @@ export OPENBLAS=$(brew --prefix openblas)
 
 export CFLAGS="-falign-functions=8 ${CFLAGS}"
 ```
-
-Download and unzip the Senzing overlay:
-<https://storage.googleapis.com/erkg/icij/ICIJ-entity-report-2024-06-21_12-04-57-std.json.zip>

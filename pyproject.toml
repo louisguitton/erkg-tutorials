@@ -6,3 +6,28 @@ line-length = 100
 [tool.isort]
 # https://github.com/timothycrosley/isort#configuring-isort
 profile = "black"
+
+[tool.poetry]
+name = "erkg-tutorials-graphgeeks"
+version = "0.1.0"
+description = "Tutorials for Entity Resolved Knowledge Graphs, doing Entity Linking on ICIJ articles."
+authors = ["Louis Guitton <louisguitton93@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+spacy-lancedb-linker = "^0.1.2"
+requests = "^2.32.3"
+tqdm = "^4.66.5"
+graphdatascience = "^1.11"
+python-dotenv = "^1.0.1"
+
+
+[tool.poetry.group.dev.dependencies]
+notebook = "^7.2.2"
+# https://python-poetry.org/docs/dependency-specification/#url-dependencies
+en_core_web_md = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.7.1/en_core_web_md-3.7.1.tar.gz" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
