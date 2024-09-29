@@ -31,6 +31,7 @@ ipywidgets = "^8.1"
 jupyterlab = "^4.2"
 jupyterlab_execute_time = "^3.1"
 watermark = "^2.4"
+pandas-stubs = "^2.2.2.240909"
 
 [tool.poetry.scripts]
 senzing-pipeline = "src.senzing_pipeline:main"

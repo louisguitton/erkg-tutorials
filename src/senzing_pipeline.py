@@ -192,12 +192,28 @@ def load_aliases(
     with open(icij_path, "r", encoding="utf-8") as fp:
         while line := fp.readline():
             dat = json.loads(line.strip())
-            ent: dict = dat["RESOLVED_ENTITY"]
-            for record in ent["RECORDS"]:
-                if ent["ENTITY_NAME"]:
+
+            # add aliases from resolved entities
+            entity: dict = dat["RESOLVED_ENTITY"]
+            if not entity["ENTITY_NAME"]:
+                continue
+            for record in entity["RECORDS"]:
+                alias_records.append(
+                    {"alias": entity["ENTITY_NAME"], "entity": record["INTERNAL_ID"]}
+                )
+
+            # add aliases from related entities
+            related_entities: dict = dat["RELATED_ENTITIES"]
+            for record in related_entities:
+                # MATCH_LEVEL_CODE is either POSSIBLY_SAME or POSSIBLY_RELATED or RESOLVED or DISCLOSED
+                # we choose to add an alias record if POSSIBLY_SAME
+                if record["MATCH_LEVEL_CODE"] in ["POSSIBLY_SAME", "RESOLVED", "DISCLOSED"]:
                     alias_records.append(
-                        {"alias": ent["ENTITY_NAME"], "entity": record["INTERNAL_ID"]}
+                        {"alias": entity["ENTITY_NAME"], "entity": record["ENTITY_ID"]}
                     )
+                # and discard if POSSIBLY_RELATED
+                elif record["MATCH_LEVEL_CODE"] == "POSSIBLY_RELATED":
+                    continue
 
     return alias_records
 
