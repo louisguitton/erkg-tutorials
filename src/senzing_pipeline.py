@@ -13,12 +13,15 @@ from enum import Enum
 from typing import TypedDict
 
 import pandas as pd
+from loguru import logger
+from tqdm import tqdm
 
 
 def load_countries(country_codes_path: str | pathlib.Path = "data/senzing/country.tsv") -> dict:
     """Map from a country code to a full name."""
     COUNTRIES: dict = {}
 
+    logger.info(f"Loading country codes from {country_codes_path}")
     with open(country_codes_path, "r", encoding="utf-8") as fp:
         tsv_reader = csv.reader(fp, delimiter="\t")
         next(tsv_reader, None)  # skip the header row
@@ -53,19 +56,25 @@ def load_entities(
     """Map from entity_id to the available entity features in the Senzing results."""
     ents: dict[str, dict[EntityFeature, str]] = {}
 
-    with open(icij_path, "r", encoding="utf-8") as fp:
-        while line := fp.readline():
-            dat = json.loads(line.strip())
-            ent: dict = dat["RESOLVED_ENTITY"]
+    logger.info(f"Parsing Senzing results: {icij_path}")
+    num_lines = sum(1 for _ in open(icij_path))
 
-            ent_id: str = ent["ENTITY_ID"]
+    with tqdm(total=num_lines) as pbar:
+        with open(icij_path, "r", encoding="utf-8") as fp:
+            while line := fp.readline():
+                dat = json.loads(line.strip())
+                ent: dict = dat["RESOLVED_ENTITY"]
 
-            features: dict[EntityFeature, str] = {
-                EntityFeature(key): feature[0]["FEAT_DESC"]
-                for key, feature in ent["FEATURES"].items()
-            }
+                ent_id: str = ent["ENTITY_ID"]
 
-            ents[ent_id] = features
+                features: dict[EntityFeature, str] = {
+                    EntityFeature(key): feature[0]["FEAT_DESC"]
+                    for key, feature in ent["FEATURES"].items()
+                }
+
+                ents[ent_id] = features
+
+                pbar.update(1)
 
     return ents
 
@@ -115,7 +124,13 @@ def generate_entities(
     """Generate entity entities (or description) that can be used in Entity Linking."""
     entities: dict[str, EntityData] = {}
 
-    for ent_id, ent_feat in raw_entities.items():
+    logger.remove()
+    logger.add(
+        lambda msg: tqdm.write(msg, end=""),
+        colorize=True,
+    )
+    logger.info("Generating entities")
+    for ent_id, ent_feat in tqdm(raw_entities.items()):
         if EntityFeature.NAME in ent_feat:
             name: str | None = ent_feat.get(EntityFeature.NAME)
 
@@ -143,7 +158,7 @@ def generate_entities(
                     if desc := ent_feat.get(EntityFeature.WEBSITE):
                         text += ", website " + desc
                     entities[ent_id] = EntityData(
-                        entity_id=ent_id, type=kind, name=name, description=text
+                        entity_id=str(ent_id), type=kind, name=name, description=text
                     )
 
                 elif kind == "PERSON":
@@ -160,7 +175,7 @@ def generate_entities(
                         if country:
                             text += ", in " + country
                     entities[ent_id] = EntityData(
-                        entity_id=ent_id, type=kind, name=name, description=text
+                        entity_id=str(ent_id), type=kind, name=name, description=text
                     )
 
                 else:
@@ -173,6 +188,7 @@ def write_entities(
     summaries: dict[str, EntityData], filepath: str | pathlib.Path = "data/senzing/entities.jsonl"
 ):
     """Write the generated summaries to a file."""
+    logger.info(f"Writing entities to: {filepath}")
     with open(filepath, "w") as outfile:
         for ent_id, summary in summaries.items():
             json.dump(summary, outfile)
@@ -190,40 +206,48 @@ def load_aliases(
 ) -> list[AliasRawData]:
     alias_records: list[AliasRawData] = []
 
-    with open(icij_path, "r", encoding="utf-8") as fp:
-        while line := fp.readline():
-            dat = json.loads(line.strip())
+    logger.info(f"Parsing Senzing results: {icij_path}")
+    num_lines = sum(1 for _ in open(icij_path))
 
-            # add aliases from resolved entities
-            entity: dict = dat["RESOLVED_ENTITY"]
-            if not entity["ENTITY_NAME"]:
-                continue
-            for record in entity["RECORDS"]:
-                alias_records.append(
-                    {"alias": entity["ENTITY_NAME"], "entity": record["INTERNAL_ID"]}
-                )
+    with tqdm(total=num_lines) as pbar:
+        with open(icij_path, "r", encoding="utf-8") as fp:
+            while line := fp.readline():
+                dat = json.loads(line.strip())
 
-            # add aliases from related entities
-            if not include_possibly_related:
-                continue
-            related_entities: dict = dat["RELATED_ENTITIES"]
-            for record in related_entities:
-                # MATCH_LEVEL_CODE is either POSSIBLY_SAME or POSSIBLY_RELATED or RESOLVED or DISCLOSED
-                # we choose to add an alias record if POSSIBLY_SAME
-                if record["MATCH_LEVEL_CODE"] in ["POSSIBLY_SAME", "RESOLVED", "DISCLOSED"]:
-                    alias_records.append(
-                        {"alias": entity["ENTITY_NAME"], "entity": record["ENTITY_ID"]}
-                    )
-                # and discard if POSSIBLY_RELATED
-                elif record["MATCH_LEVEL_CODE"] == "POSSIBLY_RELATED":
+                # add aliases from resolved entities
+                entity: dict = dat["RESOLVED_ENTITY"]
+                if not entity["ENTITY_NAME"]:
                     continue
+                for record in entity["RECORDS"]:
+                    alias_records.append(
+                        {"alias": entity["ENTITY_NAME"], "entity": record["INTERNAL_ID"]}
+                    )
+
+                # add aliases from related entities
+                if not include_possibly_related:
+                    continue
+                related_entities: dict = dat["RELATED_ENTITIES"]
+                for record in related_entities:
+                    # MATCH_LEVEL_CODE is either POSSIBLY_SAME or POSSIBLY_RELATED or RESOLVED or DISCLOSED
+                    # we choose to add an alias record if POSSIBLY_SAME
+                    if record["MATCH_LEVEL_CODE"] in ["POSSIBLY_SAME", "RESOLVED", "DISCLOSED"]:
+                        alias_records.append(
+                            {"alias": entity["ENTITY_NAME"], "entity": record["ENTITY_ID"]}
+                        )
+                    # and discard if POSSIBLY_RELATED
+                    elif record["MATCH_LEVEL_CODE"] == "POSSIBLY_RELATED":
+                        continue
+
+                pbar.update(1)
 
     return alias_records
 
 
 def generate_aliases(raw_aliases: list[AliasRawData]) -> pd.DataFrame:
+    logger.info("Generating aliases")
     df = (
         pd.DataFrame.from_records(raw_aliases)
+        .astype({"entity": str})
         .groupby("alias")
         .agg(counts=("entity", Counter))
         .assign(entities=lambda d: d.counts.apply(list))
@@ -241,6 +265,7 @@ def generate_aliases(raw_aliases: list[AliasRawData]) -> pd.DataFrame:
 def write_aliases(
     aliases: pd.DataFrame, filepath: str | pathlib.Path = "data/senzing/aliases.jsonl"
 ):
+    logger.info(f"Writing aliases to: {filepath}")
     aliases.to_json(filepath, orient="records", lines=True)
 
 

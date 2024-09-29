@@ -20,6 +20,7 @@ requests = "^2.32.3"
 tqdm = "^4.66.5"
 graphdatascience = "^1.11"
 python-dotenv = "^1.0.1"
+loguru = "^0.7.2"
 
 [tool.poetry.group.dev.dependencies]
 notebook = "^7.2.2"
@@ -32,6 +33,7 @@ jupyterlab = "^4.2"
 jupyterlab_execute_time = "^3.1"
 watermark = "^2.4"
 pandas-stubs = "^2.2.2.240909"
+types-tqdm = "^4.66.0.20240417"
 
 [tool.poetry.scripts]
 senzing-pipeline = "src.senzing_pipeline:main"
