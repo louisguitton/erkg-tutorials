@@ -1,14 +1,5 @@
-[tool.black]
-# https://github.com/psf/black#pyprojecttoml
-line-length = 100
-
-
-[tool.isort]
-# https://github.com/timothycrosley/isort#configuring-isort
-profile = "black"
-
 [tool.poetry]
-package-mode = false
+package-mode = true
 name = "erkg-tutorials-graphgeeks"
 version = "0.1.0"
 description = "Tutorials for Entity Resolved Knowledge Graphs, doing Entity Linking on ICIJ articles."
@@ -18,6 +9,9 @@ homepage = "https://guitton.co/"
 repository = "https://github.com/louisguitton/erkg-tutorials"
 documentation = "https://guitton.co/"
 keywords = ["spacy", "senzing", "entity-linking", "icij"]
+packages = [
+    { include = "src" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -38,6 +32,18 @@ jupyterlab = "^4.2"
 jupyterlab_execute_time = "^3.1"
 watermark = "^2.4"
 
+[tool.poetry.scripts]
+senzing-pipeline = "src.senzing_pipeline:main"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+# https://github.com/psf/black#pyprojecttoml
+line-length = 100
+
+
+[tool.isort]
+# https://github.com/timothycrosley/isort#configuring-isort
+profile = "black"
