@@ -252,7 +252,7 @@ def generate_aliases(raw_aliases: list[AliasRawData]) -> pd.DataFrame:
         .agg(counts=("entity", Counter))
         .assign(entities=lambda d: d.counts.apply(list))
         .assign(
-            probabilites=lambda d: d.counts.apply(
+            probabilities=lambda d: d.counts.apply(
                 lambda x: [count / x.total() for k, count in x.items()]
             )
         )
