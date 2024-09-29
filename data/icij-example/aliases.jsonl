@@ -1,12 +1,3 @@
-{"alias": "Indian Creek Village", "entities": ["Q2583813"], "probabilities": [1]}
-{"alias": "Billionaire's Bunker", "entities": ["Q2583813"], "probabilities": [1]}
-{"alias": "Billionaire's Island", "entities": ["Q2583813"], "probabilities": [1]}
-{"alias": "Fab Four", "entities": ["Q1299"], "probabilities": [1]}
-{"alias": "The Lads from Liverpool", "entities": ["Q1299"], "probabilities": [1]}
-{"alias": "Beatles", "entities": ["Q1299"], "probabilities": [1]}
-{"alias": "John, Paul, George, and Ringo", "entities": ["Q1299"], "probabilities": [1]}
-{"alias": "City of Angels", "entities": ["Q65"], "probabilities": [1]}
-{"alias": "La La Land", "entities": ["Q65"], "probabilities": [1]}
-{"alias": "ICIJ", "entities": ["Q16166292"], "probabilities": [1]}
-{"alias": "", "entities": [""], "probabilities": []}
-{"alias": "", "entities": [""], "probabilities": []}
+version https://git-lfs.github.com/spec/v1
+oid sha256:29351b6d386927c6db49b3fe8226107e82b990d5192fc34545201fb424e97154
+size 860
