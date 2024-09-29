@@ -9,6 +9,7 @@ import json
 import pathlib
 import re
 from enum import Enum
+from typing import TypedDict
 
 
 def load_countries(country_codes_path: str | pathlib.Path = "data/senzing/country.tsv") -> dict:
@@ -98,21 +99,29 @@ def filter_bearer(name: str) -> bool:
     return True
 
 
-def generate_summaries(
-    entities: dict[str, dict[EntityFeature, str]], countries: dict
-) -> dict[str, str]:
-    """Generate entity summaries (or description) that can be used in Entity Linking."""
-    summaries: dict[str, str] = {}
+class EntityData(TypedDict):
+    entity_id: str
+    type: str
+    name: str
+    description: str
 
-    for ent_id, ent_feat in entities.items():
+
+def generate_entities(
+    raw_entities: dict[str, dict[EntityFeature, str]], countries: dict
+) -> dict[str, EntityData]:
+    """Generate entity entities (or description) that can be used in Entity Linking."""
+    entities: dict[str, EntityData] = {}
+
+    for ent_id, ent_feat in raw_entities.items():
         if EntityFeature.NAME in ent_feat:
-            text: str | None = ent_feat.get(EntityFeature.NAME)
+            name: str | None = ent_feat.get(EntityFeature.NAME)
 
-            if not text:
+            if not name:
                 continue
 
-            if filter_bearer(text.strip()):
+            if filter_bearer(name.strip()):
                 kind: str | None = ent_feat.get(EntityFeature.RECORD_TYPE)
+                text = name
 
                 if not kind:
                     continue
@@ -130,7 +139,9 @@ def generate_summaries(
                             text += ", in " + country
                     if desc := ent_feat.get(EntityFeature.WEBSITE):
                         text += ", website " + desc
-                    summaries[ent_id] = text
+                    entities[ent_id] = EntityData(
+                        entity_id=ent_id, type=kind, name=name, description=text
+                    )
 
                 elif kind == "PERSON":
                     if desc := ent_feat.get(EntityFeature.DOB):
@@ -145,29 +156,29 @@ def generate_summaries(
                         country: str | None = get_country(countries, desc)  # type:ignore[no-redef]
                         if country:
                             text += ", in " + country
-                    summaries[ent_id] = text
+                    entities[ent_id] = EntityData(
+                        entity_id=ent_id, type=kind, name=name, description=text
+                    )
 
                 else:
                     print(f"New entity type: {kind}")
 
-    return summaries
+    return entities
 
 
-def write_summaries(
-    summaries: dict[str, str], filepath: str | pathlib.Path = "data/senzing/summaries.tsv"
+def write_entities(
+    summaries: dict[str, EntityData], filepath: str | pathlib.Path = "data/senzing/entities.jsonl"
 ):
     """Write the generated summaries to a file."""
-    with open(filepath, "w", encoding="utf-8") as fp:
-        writer = csv.writer(fp, delimiter="\t", lineterminator="\n")
-        writer.writerow(["sz_ent_id", "summary"])
-
+    with open(filepath, "w") as outfile:
         for ent_id, summary in summaries.items():
-            writer.writerow([ent_id, summary])
+            json.dump(summary, outfile)
+            outfile.write("\n")
 
 
 def main():
     """Entrypoint to the Senzing data pipeline."""
     countries = load_countries()
-    entities = load_entities()
-    summaries = generate_summaries(entities, countries)
-    write_summaries(summaries)
+    raw_entities = load_entities()
+    entities = generate_entities(raw_entities, countries)
+    write_entities(entities)
