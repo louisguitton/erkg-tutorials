@@ -8,8 +8,11 @@ import csv
 import json
 import pathlib
 import re
+from collections import Counter
 from enum import Enum
 from typing import TypedDict
+
+import pandas as pd
 
 
 def load_countries(country_codes_path: str | pathlib.Path = "data/senzing/country.tsv") -> dict:
@@ -176,9 +179,59 @@ def write_entities(
             outfile.write("\n")
 
 
+class AliasRawData(TypedDict):
+    alias: str
+    entity: int
+
+
+def load_aliases(
+    icij_path: str | pathlib.Path = "data/ICIJ-entity-report-2024-06-21_12-04-57-std.json",
+) -> list[AliasRawData]:
+    alias_records: list[AliasRawData] = []
+
+    with open(icij_path, "r", encoding="utf-8") as fp:
+        while line := fp.readline():
+            dat = json.loads(line.strip())
+            ent: dict = dat["RESOLVED_ENTITY"]
+            for record in ent["RECORDS"]:
+                if ent["ENTITY_NAME"]:
+                    alias_records.append(
+                        {"alias": ent["ENTITY_NAME"], "entity": record["INTERNAL_ID"]}
+                    )
+
+    return alias_records
+
+
+def generate_aliases(raw_aliases: list[AliasRawData]) -> pd.DataFrame:
+    df = (
+        pd.DataFrame.from_records(raw_aliases)
+        .groupby("alias")
+        .agg(counts=("entity", Counter))
+        .assign(entities=lambda d: d.counts.apply(list))
+        .assign(
+            probabilites=lambda d: d.counts.apply(
+                lambda x: [count / x.total() for k, count in x.items()]
+            )
+        )
+        .drop(columns="counts")
+        .reset_index()
+    )
+    return df
+
+
+def write_aliases(
+    aliases: pd.DataFrame, filepath: str | pathlib.Path = "data/senzing/aliases.jsonl"
+):
+    aliases.to_json(filepath, orient="records", lines=True)
+
+
 def main():
     """Entrypoint to the Senzing data pipeline."""
     countries = load_countries()
     raw_entities = load_entities()
     entities = generate_entities(raw_entities, countries)
     write_entities(entities)
+
+    raw_aliases = load_aliases()
+    aliases = generate_aliases(raw_aliases)
+    write_aliases(aliases)
