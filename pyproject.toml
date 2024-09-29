@@ -1,18 +1,17 @@
-[tool.black]
-# https://github.com/psf/black#pyprojecttoml
-line-length = 100
-
-
-[tool.isort]
-# https://github.com/timothycrosley/isort#configuring-isort
-profile = "black"
-
 [tool.poetry]
+package-mode = true
 name = "erkg-tutorials-graphgeeks"
 version = "0.1.0"
 description = "Tutorials for Entity Resolved Knowledge Graphs, doing Entity Linking on ICIJ articles."
-authors = ["Louis Guitton <louisguitton93@gmail.com>"]
+authors = ["Louis Guitton <louisguitton93@gmail.com>", "Paco Nathan <paco@derwen.ai>"]
 readme = "README.md"
+homepage = "https://guitton.co/"
+repository = "https://github.com/louisguitton/erkg-tutorials"
+documentation = "https://guitton.co/"
+keywords = ["spacy", "senzing", "entity-linking", "icij"]
+packages = [
+    { include = "src" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -21,17 +20,30 @@ requests = "^2.32.3"
 tqdm = "^4.66.5"
 graphdatascience = "^1.11"
 python-dotenv = "^1.0.1"
+
+[tool.poetry.group.dev.dependencies]
+notebook = "^7.2.2"
+# https://python-poetry.org/docs/dependency-specification/#url-dependencies
+en_core_web_md = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.7.1/en_core_web_md-3.7.1.tar.gz" }
+# notebook environment
 icecream = "^2.1"
 ipywidgets = "^8.1"
 jupyterlab = "^4.2"
 jupyterlab_execute_time = "^3.1"
 watermark = "^2.4"
 
-[tool.poetry.group.dev.dependencies]
-notebook = "^7.2.2"
-# https://python-poetry.org/docs/dependency-specification/#url-dependencies
-en_core_web_md = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.7.1/en_core_web_md-3.7.1.tar.gz" }
+[tool.poetry.scripts]
+senzing-pipeline = "src.senzing_pipeline:main"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+# https://github.com/psf/black#pyprojecttoml
+line-length = 100
+
+
+[tool.isort]
+# https://github.com/timothycrosley/isort#configuring-isort
+profile = "black"
