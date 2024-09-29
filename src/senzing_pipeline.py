@@ -186,6 +186,7 @@ class AliasRawData(TypedDict):
 
 def load_aliases(
     icij_path: str | pathlib.Path = "data/ICIJ-entity-report-2024-06-21_12-04-57-std.json",
+    include_possibly_related: bool = True,
 ) -> list[AliasRawData]:
     alias_records: list[AliasRawData] = []
 
@@ -203,6 +204,8 @@ def load_aliases(
                 )
 
             # add aliases from related entities
+            if not include_possibly_related:
+                continue
             related_entities: dict = dat["RELATED_ENTITIES"]
             for record in related_entities:
                 # MATCH_LEVEL_CODE is either POSSIBLY_SAME or POSSIBLY_RELATED or RESOLVED or DISCLOSED
