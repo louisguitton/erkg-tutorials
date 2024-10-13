@@ -9,8 +9,8 @@ SCRAPE_HEADERS: dict[str, str] = {
 }
 
 URLS = [
-    "https://www.icij.org/investigations/pandora-papers/secret-real-estate-purchases-are-a-driving-force-behind-the-offshore-economy/",
     "https://www.icij.org/investigations/pandora-papers/former-czech-leaders-secret-french-estate-revealed-in-pandora-papers-listed-for-sale/",
+    "https://www.icij.org/investigations/panama-papers/20160404-azerbaijan-hidden-wealth/",
 ]
 
 
@@ -46,8 +46,9 @@ class IcijScraper(BeautifulSoup):
         """
 
 
-if __name__ == "__name__":
-    scrape_nlp: spacy.Language = spacy.load(SPACY_MODEL)
+def main() -> None:
+    """Entrypoint for the scraper."""
+    scrape_nlp: spacy.Language = spacy.load(SPACY_MODEL, disable=["ner"])
 
     # ref: https://spacy.io/api/docbin
     doc_bin = DocBin()
@@ -73,4 +74,4 @@ if __name__ == "__name__":
         )
         doc_bin.add(scrape_doc)
 
-    doc_bin.to_disk("./dataset.spacy")
+    doc_bin.to_disk("./data/dataset.spacy")
