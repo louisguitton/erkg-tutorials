@@ -18,9 +18,9 @@ python = "^3.12"
 spacy-lancedb-linker = "^0.1.2"
 requests = "^2.32.3"
 tqdm = "^4.66.5"
-graphdatascience = "^1.11"
 python-dotenv = "^1.0.1"
 loguru = "^0.7.2"
+pandas = "^2.2.3"
 
 [tool.poetry.group.dev.dependencies]
 notebook = "^7.2.2"

@@ -771,32 +771,6 @@ test-full = ["adlfs", "aiohttp (!=4.0.0a0,!=4.0.0a1)", "cloudpickle", "dask", "d
 tqdm = ["tqdm"]
 
 [[package]]
-name = "graphdatascience"
-version = "1.11"
-description = "A Python client for the Neo4j Graph Data Science (GDS) library"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "graphdatascience-1.11-py3-none-any.whl", hash = "sha256:a8cb9365685f68e9749d9c21d500361b98d6464c1cfc3176e31928cbb1f10ea9"},
-    {file = "graphdatascience-1.11.tar.gz", hash = "sha256:78fcde12da10d5c3bd1f80e9171bf055f7df29181297e58b5ef0852762fafdb0"},
-]
-
-[package.dependencies]
-multimethod = ">=1.0,<2.0"
-neo4j = ">=4.4.12,<6.0"
-numpy = "<2.0"
-pandas = ">=1.0,<3.0"
-pyarrow = ">=14.0.1,<17.0"
-requests = "*"
-textdistance = ">=4.0,<5.0"
-tqdm = ">=4.0,<5.0"
-typing-extensions = ">=4.0,<5.0"
-
-[package.extras]
-networkx = ["networkx (>=2.0,<4.0)"]
-ogb = ["ogb (>=1.0,<2.0)"]
-
-[[package]]
 name = "h11"
 version = "0.14.0"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
@@ -1726,17 +1700,6 @@ gmpy = ["gmpy2 (>=2.1.0a4)"]
 tests = ["pytest (>=4.6)"]
 
 [[package]]
-name = "multimethod"
-version = "1.12"
-description = "Multiple argument dispatching."
-optional = false
-python-versions = ">=3.9"
-files = [
-    {file = "multimethod-1.12-py3-none-any.whl", hash = "sha256:fd0c473c43558908d97cc06e4d68e8f69202f167db46f7b4e4058893e7dbdf60"},
-    {file = "multimethod-1.12.tar.gz", hash = "sha256:8db8ef2a8d2a247e3570cc23317680892fdf903d84c8c1053667c8e8f7671a67"},
-]
-
-[[package]]
 name = "murmurhash"
 version = "1.0.10"
 description = "Cython bindings for MurmurHash"
@@ -1857,25 +1820,6 @@ traitlets = ">=5.1"
 [package.extras]
 docs = ["myst-parser", "pydata-sphinx-theme", "sphinx", "sphinxcontrib-github-alt", "sphinxcontrib-spelling"]
 test = ["pep440", "pre-commit", "pytest", "testpath"]
-
-[[package]]
-name = "neo4j"
-version = "5.25.0"
-description = "Neo4j Bolt driver for Python"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "neo4j-5.25.0-py3-none-any.whl", hash = "sha256:df310eee9a4f9749fb32bb9f1aa68711ac417b7eba3e42faefd6848038345ffa"},
-    {file = "neo4j-5.25.0.tar.gz", hash = "sha256:7c82001c45319092cc0b5df4c92894553b7ab97bd4f59655156fa9acab83aec9"},
-]
-
-[package.dependencies]
-pytz = "*"
-
-[package.extras]
-numpy = ["numpy (>=1.7.0,<2.0.0)"]
-pandas = ["numpy (>=1.7.0,<2.0.0)", "pandas (>=1.1.0,<3.0.0)"]
-pyarrow = ["pyarrow (>=1.0.0)"]
 
 [[package]]
 name = "nest-asyncio"
@@ -2619,10 +2563,7 @@ files = [
 [package.dependencies]
 annotated-types = ">=0.6.0"
 pydantic-core = "2.23.4"
-typing-extensions = [
-    {version = ">=4.12.2", markers = "python_version >= \"3.13\""},
-    {version = ">=4.6.1", markers = "python_version < \"3.13\""},
-]
+typing-extensions = {version = ">=4.6.1", markers = "python_version < \"3.13\""}
 
 [package.extras]
 email = ["email-validator (>=2.0.0)"]
@@ -3961,32 +3902,6 @@ test = ["pre-commit", "pytest (>=7.0)", "pytest-timeout"]
 typing = ["mypy (>=1.6,<2.0)", "traitlets (>=5.11.1)"]
 
 [[package]]
-name = "textdistance"
-version = "4.6.3"
-description = "Compute distance between the two texts."
-optional = false
-python-versions = ">=3.5"
-files = [
-    {file = "textdistance-4.6.3-py3-none-any.whl", hash = "sha256:0cb1b2cc8e3339ddc3e0f8c870e49fb49de6ecc42a718917308b3c971f34aa56"},
-    {file = "textdistance-4.6.3.tar.gz", hash = "sha256:d6dabc50b4ea832cdcf0e1e6021bd0c7fcd9ade155888d79bb6a3c31fce2dc6f"},
-]
-
-[package.extras]
-all = ["Levenshtein", "distance", "jellyfish", "numpy", "py-stringmatching", "pylev", "pyxDamerauLevenshtein", "rapidfuzz (>=2.6.0)", "tabulate"]
-benchmark = ["Levenshtein", "distance", "jellyfish", "numpy", "py-stringmatching", "pylev", "pyxDamerauLevenshtein", "rapidfuzz (>=2.6.0)", "tabulate"]
-benchmarks = ["Levenshtein", "distance", "jellyfish", "numpy", "py-stringmatching", "pylev", "pyxDamerauLevenshtein", "rapidfuzz (>=2.6.0)", "tabulate"]
-common = ["Levenshtein", "jellyfish", "numpy", "pyxDamerauLevenshtein", "rapidfuzz (>=2.6.0)"]
-dameraulevenshtein = ["jellyfish", "pyxDamerauLevenshtein", "rapidfuzz (>=2.6.0)"]
-extra = ["Levenshtein", "jellyfish", "numpy", "pyxDamerauLevenshtein", "rapidfuzz (>=2.6.0)"]
-extras = ["Levenshtein", "jellyfish", "numpy", "pyxDamerauLevenshtein", "rapidfuzz (>=2.6.0)"]
-hamming = ["Levenshtein", "distance", "jellyfish", "rapidfuzz (>=2.6.0)"]
-jaro = ["Levenshtein", "rapidfuzz (>=2.6.0)"]
-jarowinkler = ["jellyfish", "rapidfuzz (>=2.6.0)"]
-levenshtein = ["Levenshtein", "rapidfuzz (>=2.6.0)"]
-lint = ["flake8", "flake8-blind-except", "flake8-bugbear", "flake8-commas", "flake8-logging-format", "flake8-mutable", "flake8-pep3101", "flake8-quotes", "flake8-string-format", "flake8-tidy-imports", "isort", "mypy", "pep8-naming", "twine", "types-tabulate"]
-test = ["hypothesis", "isort", "numpy", "pytest"]
-
-[[package]]
 name = "thinc"
 version = "8.2.5"
 description = "A refreshing functional take on deep learning, compatible with your favorite libraries"
@@ -4776,5 +4691,5 @@ type = ["pytest-mypy"]
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.12"
-content-hash = "fe1d68da64f301cc1d845f70e5b836e6dcb2334ab01d15f462bc224f62ca1813"
+python-versions = ">=3.12,<3.13"
+content-hash = "de6f2f6af457e57b9b7bfd1316e163dca4b11849a6ea0b3e13f87d3ce61c20fd"
