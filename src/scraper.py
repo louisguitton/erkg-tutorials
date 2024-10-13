@@ -46,7 +46,7 @@ class IcijScraper(BeautifulSoup):
         """
 
 
-def main():
+def main() -> None:
     """Entrypoint for the scraper."""
     scrape_nlp: spacy.Language = spacy.load(SPACY_MODEL, disable=["ner"])
 

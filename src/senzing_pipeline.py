@@ -118,6 +118,14 @@ class EntityData(TypedDict):
     description: str
 
 
+def get_entity_type(entity_features: dict[EntityFeature, str]) -> str:
+    if EntityFeature.DOB.value in entity_features:
+        return "PER"
+    if EntityFeature.DUNS_NUMBER.value in entity_features:
+        return "ORG"
+    return "MISC"
+
+
 def generate_entities(
     raw_entities: dict[str, dict[EntityFeature, str]], countries: dict
 ) -> dict[str, EntityData]:
@@ -138,13 +146,10 @@ def generate_entities(
                 continue
 
             if filter_bearer(name.strip()):
-                kind: str | None = ent_feat.get(EntityFeature.RECORD_TYPE)
+                entity_type = get_entity_type(ent_feat)
                 text = name
 
-                if not kind:
-                    continue
-
-                elif kind == "ORGANIZATION":
+                if entity_type == "ORG":
                     if desc := ent_feat.get(EntityFeature.ADDRESS):
                         text += ", located at " + desc
                     if desc := ent_feat.get(EntityFeature.DUNS_NUMBER):
@@ -158,10 +163,10 @@ def generate_entities(
                     if desc := ent_feat.get(EntityFeature.WEBSITE):
                         text += ", website " + desc
                     entities[ent_id] = EntityData(
-                        entity_id=str(ent_id), type=kind, name=name, description=text
+                        entity_id=str(ent_id), type=entity_type, name=name, description=text
                     )
 
-                elif kind == "PERSON":
+                elif entity_type == "PER":
                     if desc := ent_feat.get(EntityFeature.DOB):
                         text += ", born " + desc
                     if desc := ent_feat.get(EntityFeature.PHONE):
@@ -175,11 +180,11 @@ def generate_entities(
                         if country:
                             text += ", in " + country
                     entities[ent_id] = EntityData(
-                        entity_id=str(ent_id), type=kind, name=name, description=text
+                        entity_id=str(ent_id), type=entity_type, name=name, description=text
                     )
 
                 else:
-                    print(f"New entity type: {kind}")
+                    print(f"New entity type: {ent_feat.get(EntityFeature.RECORD_TYPE)}")
 
     return entities
 
@@ -198,6 +203,7 @@ def write_entities(
 class AliasRawData(TypedDict):
     alias: str
     entity: int
+    type: str
 
 
 def load_aliases(
@@ -213,26 +219,37 @@ def load_aliases(
         with open(icij_path, "r", encoding="utf-8") as fp:
             while line := fp.readline():
                 dat = json.loads(line.strip())
-
-                # add aliases from resolved entities
                 entity: dict = dat["RESOLVED_ENTITY"]
+                related_entities: dict = dat["RELATED_ENTITIES"]
+
                 if not entity["ENTITY_NAME"]:
                     continue
+
+                entity_type = get_entity_type(entity["FEATURES"])
+
+                # add aliases from resolved entities
                 for record in entity["RECORDS"]:
                     alias_records.append(
-                        {"alias": entity["ENTITY_NAME"], "entity": record["INTERNAL_ID"]}
+                        {
+                            "alias": record["ENTITY_DESC"],
+                            "entity": record["INTERNAL_ID"],
+                            "type": entity_type,
+                        }
                     )
 
                 # add aliases from related entities
                 if not include_possibly_related:
                     continue
-                related_entities: dict = dat["RELATED_ENTITIES"]
                 for record in related_entities:
                     # MATCH_LEVEL_CODE is either POSSIBLY_SAME or POSSIBLY_RELATED or RESOLVED or DISCLOSED
                     # we choose to add an alias record if POSSIBLY_SAME
                     if record["MATCH_LEVEL_CODE"] in ["POSSIBLY_SAME", "RESOLVED", "DISCLOSED"]:
                         alias_records.append(
-                            {"alias": entity["ENTITY_NAME"], "entity": record["ENTITY_ID"]}
+                            {
+                                "alias": entity["ENTITY_NAME"],
+                                "entity": record["ENTITY_ID"],
+                                "type": entity_type,
+                            }
                         )
                     # and discard if POSSIBLY_RELATED
                     elif record["MATCH_LEVEL_CODE"] == "POSSIBLY_RELATED":
@@ -241,6 +258,23 @@ def load_aliases(
                 pbar.update(1)
 
     return alias_records
+
+
+class EntityRulerPattern(TypedDict):
+    label: str
+    pattern: str
+    id: str
+
+
+def generate_patterns(raw_aliases: list[AliasRawData]) -> list[EntityRulerPattern]:
+    return [
+        {
+            "label": alias["type"],
+            "pattern": alias["alias"],
+            "id": str(alias["entity"]),
+        }
+        for alias in raw_aliases
+    ]
 
 
 def generate_aliases(raw_aliases: list[AliasRawData]) -> pd.DataFrame:
