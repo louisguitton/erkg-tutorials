@@ -370,14 +370,7 @@ def extract_senzing_results(filename: str | pathlib.Path) -> dict[int, Entity]:
     return entities
 
 
-def filter_senzing() -> set[str]:
-    logger.info("Loading suspicions")
-    with open("data/icij-example/suspicious.txt") as file:
-        names = [line.rstrip() for line in file]
-
-    logger.info("Loading Senzing results")
-    entities = extract_senzing_results("data/ICIJ-entity-report-2024-06-21_12-04-57-std.json")
-
+def filter_senzing(suspicions, graph) -> set[str]:
     logger.info("Filter Senzing results for suspicions only")
     df = pd.DataFrame.from_records(
         [
@@ -387,10 +380,10 @@ def filter_senzing() -> set[str]:
                     # here we filter for exact match, which is high precision + low recall
                     # we might miss companies with names that differ slightly
                     # we hope to catch them with the "friends of friends" filtering later
-                    filter(lambda ent: ent.name == name, [entity for k, entity in entities.items()])
+                    filter(lambda ent: ent.name == name, [entity for k, entity in graph.items()])
                 ),
             )
-            for name in names
+            for name in suspicions
         ],
         columns=["suspicion", "matches"],
     )
@@ -399,9 +392,7 @@ def filter_senzing() -> set[str]:
     rank_0 = df.matches.explode().dropna().apply(lambda d: d.entity_uid).unique()
     rank_1 = df.matches.explode().dropna().apply(lambda d: d.related.keys()).explode().unique()
     rank_2 = set(
-        ent_id
-        for seed_id in set(rank_0) | set(rank_1)
-        for ent_id in entities[seed_id].related.keys()
+        ent_id for seed_id in set(rank_0) | set(rank_1) for ent_id in graph[seed_id].related.keys()
     )
     return set(str(ent_id) for ent_id in set(rank_0) | set(rank_1) | set(rank_2))
 
@@ -412,7 +403,14 @@ def main():
     raw_entities = load_entities()
     raw_aliases = load_aliases()
 
-    entity_ids = filter_senzing()
+    logger.info("Loading suspicions")
+    with open("data/icij-example/suspicious.txt") as file:
+        names = [line.rstrip() for line in file]
+
+    logger.info("Loading Senzing results")
+    entities = extract_senzing_results("data/ICIJ-entity-report-2024-06-21_12-04-57-std.json")
+
+    entity_ids = filter_senzing(names, entities)
     filtered_entities = {k: v for k, v in raw_entities.items() if str(k) in entity_ids}
     filtered_aliases = [alias for alias in raw_aliases if str(alias["entity"]) in entity_ids]
 
