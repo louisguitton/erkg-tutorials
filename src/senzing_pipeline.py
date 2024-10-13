@@ -13,8 +13,13 @@ from enum import Enum
 from typing import TypedDict
 
 import pandas as pd
+import spacy
 from loguru import logger
+from spacy.pipeline import EntityRuler
+from spacy.tokens import DocBin
 from tqdm import tqdm
+
+from src.scraper import SPACY_MODEL
 
 
 def load_countries(country_codes_path: str | pathlib.Path = "data/senzing/country.tsv") -> dict:
@@ -119,9 +124,17 @@ class EntityData(TypedDict):
 
 
 def get_entity_type(entity_features: dict[EntityFeature, str]) -> str:
-    if EntityFeature.DOB.value in entity_features:
+    if EntityFeature.RECORD_TYPE.value in entity_features:
+        if entity_features["RECORD_TYPE"] == "PERSON":
+            return "PER"
+        elif entity_features["RECORD_TYPE"] == "ORGANIZATION":
+            return "ORG"
+    if (
+        EntityFeature.DOB.value in entity_features
+        or EntityFeature.GROUP_ASSOCIATION.value in entity_features
+    ):
         return "PER"
-    if EntityFeature.DUNS_NUMBER.value in entity_features:
+    if EntityFeature.DUNS_NUMBER.value or EntityFeature.WEBSITE.value in entity_features:
         return "ORG"
     return "MISC"
 
@@ -162,7 +175,7 @@ def generate_entities(
                             text += ", in " + country
                     if desc := ent_feat.get(EntityFeature.WEBSITE):
                         text += ", website " + desc
-                    entities[ent_id] = EntityData(
+                    entities[str(ent_id)] = EntityData(
                         entity_id=str(ent_id), type=entity_type, name=name, description=text
                     )
 
@@ -179,7 +192,7 @@ def generate_entities(
                         country: str | None = get_country(countries, desc)  # type:ignore[no-redef]
                         if country:
                             text += ", in " + country
-                    entities[ent_id] = EntityData(
+                    entities[str(ent_id)] = EntityData(
                         entity_id=str(ent_id), type=entity_type, name=name, description=text
                     )
 
@@ -303,13 +316,44 @@ def write_aliases(
     aliases.to_json(filepath, orient="records", lines=True)
 
 
+def filter_senzing(
+    raw_entities: dict[str, EntityData],
+    raw_aliases: list[AliasRawData],
+    patterns: list[EntityRulerPattern],
+) -> tuple[dict[str, EntityData], list[AliasRawData]]:
+    nlp = spacy.load(SPACY_MODEL, exclude=["ner"])
+
+    logger.info("Loading patterns in EntityRuler")
+    ruler = nlp.add_pipe("entity_ruler")
+    with nlp.select_pipes(enable="tagger"):
+        ruler.add_patterns(patterns)  # type: ignore
+
+    logger.info("Loading dataset of articles")
+    doc_bin = DocBin().from_disk(path="data/dataset.spacy")
+    docs = list(doc_bin.get_docs(nlp.vocab))
+
+    logger.info("Filtering Senzing results for entities matched by EntityRuler.")
+    matched_names = set(ent.text for doc in nlp.pipe(docs) for ent in doc.ents)
+    matched_ids = set(p["id"] for p in patterns if p["pattern"] in matched_names)
+
+    # TODO: add friends of matched_ids
+
+    filtered_entities = {k: v for k, v in raw_entities.items() if str(k) in matched_ids}
+    filtered_aliases = [alias for alias in raw_aliases if str(alias["entity"]) in matched_ids]
+    return filtered_entities, filtered_aliases
+
+
 def main():
     """Entrypoint to the Senzing data pipeline."""
     countries = load_countries()
     raw_entities = load_entities()
-    entities = generate_entities(raw_entities, countries)
+    raw_aliases = load_aliases()
+
+    patterns = generate_patterns(raw_aliases)
+    stg_entities, stg_aliases = filter_senzing(raw_entities, raw_aliases, patterns)
+
+    entities = generate_entities(stg_entities, countries)
     write_entities(entities)
 
-    raw_aliases = load_aliases()
-    aliases = generate_aliases(raw_aliases)
+    aliases = generate_aliases(stg_aliases)
     write_aliases(aliases)
