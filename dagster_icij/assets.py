@@ -9,9 +9,8 @@ from spacy_lancedb_linker.types import Alias, Entity
 
 from src.scraper import SPACY_MODEL
 from src.scraper import main as scraper_entrypoint
+from src.senzing_pipeline import Entity as GraphEntity
 from src.senzing_pipeline import (
-    AliasRawData,
-    EntityFeature,
     extract_senzing_results,
     filter_senzing,
     generate_aliases,
@@ -22,7 +21,6 @@ from src.senzing_pipeline import (
     write_aliases,
     write_entities,
 )
-from src.senzing_pipeline import Entity as GraphEntity
 
 
 class ICIJSenzingConfig(Config):
