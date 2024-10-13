@@ -34,9 +34,12 @@ jupyterlab_execute_time = "^3.1"
 watermark = "^2.4"
 pandas-stubs = "^2.2.2.240909"
 types-tqdm = "^4.66.0.20240417"
+types-requests = "^2.32.0.20240914"
+types-beautifulsoup4 = "^4.12.0.20240907"
 
 [tool.poetry.scripts]
 senzing-pipeline = "src.senzing_pipeline:main"
+scraper = "src.scraper:main"
 
 [build-system]
 requires = ["poetry-core"]
