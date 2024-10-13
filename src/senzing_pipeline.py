@@ -66,7 +66,7 @@ def load_entities(
                 dat = json.loads(line.strip())
                 ent: dict = dat["RESOLVED_ENTITY"]
 
-                ent_id: str = ent["ENTITY_ID"]
+                ent_id: str = str(ent["ENTITY_ID"])
 
                 features: dict[EntityFeature, str] = {
                     EntityFeature(key): feature[0]["FEAT_DESC"]
