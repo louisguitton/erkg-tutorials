@@ -9,8 +9,8 @@ SCRAPE_HEADERS: dict[str, str] = {
 }
 
 URLS = [
-    "https://www.icij.org/investigations/pandora-papers/secret-real-estate-purchases-are-a-driving-force-behind-the-offshore-economy/",
     "https://www.icij.org/investigations/pandora-papers/former-czech-leaders-secret-french-estate-revealed-in-pandora-papers-listed-for-sale/",
+    "https://www.icij.org/investigations/panama-papers/20160404-azerbaijan-hidden-wealth/",
 ]
 
 

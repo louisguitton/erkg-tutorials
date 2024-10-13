@@ -9,17 +9,13 @@ import json
 import pathlib
 import re
 from collections import Counter
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import TypedDict
 
 import pandas as pd
-import spacy
 from loguru import logger
-from spacy.pipeline import EntityRuler
-from spacy.tokens import DocBin
 from tqdm import tqdm
-
-from src.scraper import SPACY_MODEL
 
 
 def load_countries(country_codes_path: str | pathlib.Path = "data/senzing/country.tsv") -> dict:
@@ -316,31 +312,98 @@ def write_aliases(
     aliases.to_json(filepath, orient="records", lines=True)
 
 
-def filter_senzing(
-    raw_entities: dict[str, EntityData],
-    raw_aliases: list[AliasRawData],
-    patterns: list[EntityRulerPattern],
-) -> tuple[dict[str, EntityData], list[AliasRawData]]:
-    nlp = spacy.load(SPACY_MODEL, exclude=["ner"])
+@dataclass(order=False, frozen=False)
+class Entity:
+    """
+    A data class representing a resolved entity.
+    """
 
-    logger.info("Loading patterns in EntityRuler")
-    ruler = nlp.add_pipe("entity_ruler")
-    with nlp.select_pipes(enable="tagger"):
-        ruler.add_patterns(patterns)  # type: ignore
+    entity_uid: int
+    name: str
+    num_recs: int
+    records: dict[str, str] = field(default_factory=lambda: {})
+    related: dict[int, dict] = field(default_factory=lambda: {})
+    has_ref: bool = False
 
-    logger.info("Loading dataset of articles")
-    doc_bin = DocBin().from_disk(path="data/dataset.spacy")
-    docs = list(doc_bin.get_docs(nlp.vocab))
 
-    logger.info("Filtering Senzing results for entities matched by EntityRuler.")
-    matched_names = set(ent.text for doc in nlp.pipe(docs) for ent in doc.ents)
-    matched_ids = set(p["id"] for p in patterns if p["pattern"] in matched_names)
+def extract_senzing_results(filename: str | pathlib.Path) -> dict[int, Entity]:
+    """Parse the Senzing results."""
+    entities: dict[int, Entity] = {}
 
-    # TODO: add friends of matched_ids
+    with open(filename, "r") as fp:
+        for line in tqdm(fp.readlines(), desc="read JSON"):
+            entity_dat: dict = json.loads(line)
+            entity_uid: int = entity_dat["RESOLVED_ENTITY"]["ENTITY_ID"]
 
-    filtered_entities = {k: v for k, v in raw_entities.items() if str(k) in matched_ids}
-    filtered_aliases = [alias for alias in raw_aliases if str(alias["entity"]) in matched_ids]
-    return filtered_entities, filtered_aliases
+            entity_name: str = ""
+            records: dict[str, str] = {}
+
+            for rec in entity_dat["RESOLVED_ENTITY"]["RECORDS"]:
+                record_uid: str = ".".join([rec["DATA_SOURCE"].upper(), str(rec["RECORD_ID"])])
+                match_key: str = rec["MATCH_KEY"]
+
+                if match_key.strip() == "":
+                    match_key = "INITIAL"
+                records[record_uid] = match_key
+
+                if entity_name == "" and rec["ENTITY_DESC"] != "":
+                    entity_name = rec["ENTITY_DESC"]
+
+            if entity_name == "":
+                entity_name = str(entity_uid)
+
+            entities[entity_uid] = Entity(
+                entity_uid=entity_uid,
+                name=entity_name,
+                records=records,
+                num_recs=len(records),
+                related={r["ENTITY_ID"]: r for r in entity_dat["RELATED_ENTITIES"]},
+            )
+
+    for entity in entities.values():
+        if entity.num_recs > 0:
+            entity.has_ref = True
+
+        for rel_ent_id in entity.related:
+            entities[rel_ent_id].has_ref = True
+
+    return entities
+
+
+def filter_senzing() -> set[str]:
+    logger.info("Loading suspicions")
+    with open("data/icij-example/suspicious.txt") as file:
+        names = [line.rstrip() for line in file]
+
+    logger.info("Loading Senzing results")
+    entities = extract_senzing_results("data/ICIJ-entity-report-2024-06-21_12-04-57-std.json")
+
+    logger.info("Filter Senzing results for suspicions only")
+    df = pd.DataFrame.from_records(
+        [
+            (
+                name,
+                list(
+                    # here we filter for exact match, which is high precision + low recall
+                    # we might miss companies with names that differ slightly
+                    # we hope to catch them with the "friends of friends" filtering later
+                    filter(lambda ent: ent.name == name, [entity for k, entity in entities.items()])
+                ),
+            )
+            for name in names
+        ],
+        columns=["suspicion", "matches"],
+    )
+
+    # we filter Senzing results for: direct matches, related entities to direct matches and friends of friends
+    rank_0 = df.matches.explode().dropna().apply(lambda d: d.entity_uid).unique()
+    rank_1 = df.matches.explode().dropna().apply(lambda d: d.related.keys()).explode().unique()
+    rank_2 = set(
+        ent_id
+        for seed_id in set(rank_0) | set(rank_1)
+        for ent_id in entities[seed_id].related.keys()
+    )
+    return set(str(ent_id) for ent_id in set(rank_0) | set(rank_1) | set(rank_2))
 
 
 def main():
@@ -349,11 +412,12 @@ def main():
     raw_entities = load_entities()
     raw_aliases = load_aliases()
 
-    patterns = generate_patterns(raw_aliases)
-    stg_entities, stg_aliases = filter_senzing(raw_entities, raw_aliases, patterns)
+    entity_ids = filter_senzing()
+    filtered_entities = {k: v for k, v in raw_entities.items() if str(k) in entity_ids}
+    filtered_aliases = [alias for alias in raw_aliases if str(alias["entity"]) in entity_ids]
 
-    entities = generate_entities(stg_entities, countries)
+    entities = generate_entities(filtered_entities, countries)
     write_entities(entities)
 
-    aliases = generate_aliases(stg_aliases)
+    aliases = generate_aliases(filtered_aliases)
     write_aliases(aliases)
