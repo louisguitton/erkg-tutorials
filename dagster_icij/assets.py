@@ -1,12 +1,15 @@
+import pandas as pd
+import pytextrank  # noqa
 import spacy
 import srsly
-from dagster import Config, asset
+from dagster import AssetSpec, Config, asset
 from spacy.language import Language
-from spacy.tokens import Doc, DocBin
+from spacy.tokens import DocBin
 from spacy_lancedb_linker.kb import AnnKnowledgeBase
 from spacy_lancedb_linker.linker import AnnLinker  # noqa
 from spacy_lancedb_linker.types import Alias, Entity
 
+from src.analysis import analyse_el_docs
 from src.scraper import SPACY_MODEL
 from src.scraper import main as scraper_entrypoint
 from src.senzing_pipeline import Entity as GraphEntity
@@ -33,6 +36,9 @@ class ICIJSenzingConfig(Config):
     lancedb_uri: str = "data/sample-lancedb"
 
 
+icij_senzing_results = AssetSpec(key="icij_senzing_results", group_name="source_dataset")
+
+
 @asset(group_name="senzing_pipeline")
 def suspicions(config: ICIJSenzingConfig) -> list[str]:
     with open(config.suspicions_path) as file:
@@ -40,7 +46,7 @@ def suspicions(config: ICIJSenzingConfig) -> list[str]:
         return names
 
 
-@asset(group_name="senzing_pipeline")
+@asset(group_name="senzing_pipeline", deps=[icij_senzing_results])
 def graph(config: ICIJSenzingConfig) -> dict[int, GraphEntity]:
     graph = extract_senzing_results(config.senzing_results_path)
     return graph
@@ -51,12 +57,12 @@ def suspicious_ids(suspicions: list[str], graph: dict[int, GraphEntity]) -> set[
     return filter_senzing(suspicions, graph)
 
 
-@asset(group_name="senzing_pipeline")
+@asset(group_name="senzing_pipeline", deps=[icij_senzing_results])
 def raw_entities(config: ICIJSenzingConfig):
     return load_entities(config.senzing_results_path)
 
 
-@asset(group_name="senzing_pipeline")
+@asset(group_name="senzing_pipeline", deps=[icij_senzing_results])
 def raw_aliases(config: ICIJSenzingConfig):
     return load_aliases(config.senzing_results_path)
 
@@ -102,8 +108,14 @@ def nlp() -> spacy.Language:
     return spacy.load(SPACY_MODEL)
 
 
-@asset(group_name="spacy_pipeline", deps=[aliases_jsonl, entities_jsonl])
-def entity_linking(config: ICIJSenzingConfig, nlp: Language, spacy_dataset: DocBin) -> list[Doc]:
+@asset(
+    group_name="spacy_pipeline",
+    deps=[aliases_jsonl, entities_jsonl],
+    io_manager_key="mem_io_manager",
+)
+def entity_linking(
+    config: ICIJSenzingConfig, nlp: Language, spacy_dataset: DocBin
+) -> list[pd.DataFrame]:
     entities = [Entity(**entity) for entity in srsly.read_jsonl(config.output_entities_jsonl_path)]
 
     aliases = [Alias(**alias) for alias in srsly.read_jsonl(config.output_aliases_jsonl_path)] + [
@@ -118,5 +130,8 @@ def entity_linking(config: ICIJSenzingConfig, nlp: Language, spacy_dataset: DocB
     ann_linker = nlp.add_pipe("ann_linker", last=True)
     ann_linker.set_kb(ann_kb)  # type: ignore
 
+    nlp.add_pipe("textrank")
+
     docs = spacy_dataset.get_docs(nlp.vocab)
-    return list(nlp.pipe(docs))
+
+    return analyse_el_docs(nlp.pipe(docs))
