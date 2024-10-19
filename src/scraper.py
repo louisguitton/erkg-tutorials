@@ -46,7 +46,7 @@ class IcijScraper(BeautifulSoup):
         """
 
 
-def main() -> None:
+def main(spacy_dataset_path: str = "./data/dataset.spacy") -> DocBin:
     """Entrypoint for the scraper."""
     scrape_nlp: spacy.Language = spacy.load(SPACY_MODEL, disable=["ner"])
 
@@ -74,4 +74,5 @@ def main() -> None:
         )
         doc_bin.add(scrape_doc)
 
-    doc_bin.to_disk("./data/dataset.spacy")
+    doc_bin.to_disk(spacy_dataset_path)
+    return doc_bin

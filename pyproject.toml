@@ -14,13 +14,14 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.13"
 spacy-lancedb-linker = "^0.1.2"
 requests = "^2.32.3"
 tqdm = "^4.66.5"
 python-dotenv = "^1.0.1"
 loguru = "^0.7.2"
 pandas = "^2.2.3"
+pytextrank = "^3.3.0"
 
 [tool.poetry.group.dev.dependencies]
 notebook = "^7.2.2"
@@ -36,6 +37,8 @@ pandas-stubs = "^2.2.2.240909"
 types-tqdm = "^4.66.0.20240417"
 types-requests = "^2.32.0.20240914"
 types-beautifulsoup4 = "^4.12.0.20240907"
+dagster = "^1.8.11"
+dagster-webserver = "^1.8.11"
 
 [tool.poetry.scripts]
 senzing-pipeline = "src.senzing_pipeline:main"
@@ -53,3 +56,7 @@ line-length = 100
 [tool.isort]
 # https://github.com/timothycrosley/isort#configuring-isort
 profile = "black"
+
+[tool.dagster]
+module_name = "dagster_icij.definitions"
+code_location_name = "dagster_icij"
